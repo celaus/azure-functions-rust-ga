@@ -1,0 +1,23 @@
+{
+  "name": "azure-functions-rust-ga",
+  "version": "1.0.0",
+  "description": "Check out the blog post here: [https://blog.x5ff.xyz/blog/azure-functions-wasm-rust/](https://blog.x5ff.xyz/blog/azure-functions-wasm-rust/)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/celaus/rust-azure-functions.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/celaus/rust-azure-functions/issues"
+  },
+  "homepage": "https://github.com/celaus/rust-azure-functions#readme",
+  "dependencies": {
+    "euclidean-distance": "^1.0.0",
+    "genometrics": "^2.0.1"
+  }
+}
