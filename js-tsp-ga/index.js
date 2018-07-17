@@ -4,6 +4,12 @@ const {
 } = require('genometrics');
 const distance = require('euclidean-distance')
 
+let _cities = [];
+
+function createTour(idx) {
+  return idx.map((e) => _cities[e]);
+}
+
 function totalDistance(points) {
   let total = 0;
   for (let i = 1; i < points.length; i++) {
@@ -37,6 +43,7 @@ function shuffle(array) {
 }
 
 function createPopulation(cities, popsize) {
+  _cities = cities;
   let population = new Population();
   let indices = cities.map((c, i) => `${i}`);
   for (let m = 0; m < popsize; m++) {
@@ -85,10 +92,10 @@ function solve(cities, generations, mutationRate, populationSize) {
       });
     let averageFitness = _sumFitness / pop.members.length;
     //console.log(`${_},${_sumFitness / pop.members.length},${_minFitness},${_maxFitness}`);
-    return pop.members.reduce((p, c) => {
-      return c.fitness > p.fitness ? c : p
-    }, pop.members[0]);
   }
+  return pop.members.reduce((p, c) => {
+    return c.fitness > p.fitness ? c : p
+  }, pop.members[0]);
 }
 
 module.exports = function (context, req) {
