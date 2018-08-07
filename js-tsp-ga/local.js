@@ -2,7 +2,67 @@ const {
   Citizen,
   Population
 } = require('genometrics');
-const distance = require('euclidean-distance')
+
+const A_HIGH_NR = 1000000000000;
+
+function x(s, t) {
+  let _map1 = {};
+  let _map2 = {};
+
+  const x1 = Math.floor(Math.random() * (s.length - 1));
+  const x2 = x1 + Math.floor(Math.random() * (s.length - x1));
+
+  let offspring = [Array.from(s), Array.from(t)];
+
+  for (let i = x1; i < x2; i++) {
+    offspring[0][i] = t[i];
+    _map1[t[i]] = s[i];
+
+    offspring[1][i] = s[i];
+    _map2[s[i]] = t[i];
+  }
+
+  for (let i = 0; i < x1; i++) { 
+    while (offspring[0][i] in _map1) {
+      offspring[0][i] = _map1[offspring[0][i]];
+    }
+    while (offspring[1][i] in _map2) {
+      offspring[1][i] = _map2[offspring[1][i]];
+    }
+  }
+
+  for (let i = x2; i < s.length; i++) {
+    while (offspring[0][i] in _map1) {
+      offspring[0][i] = _map1[offspring[0][i]];
+    }
+    while (offspring[1][i] in _map2) {
+      offspring[1][i] = _map2[offspring[1][i]];
+    }
+  }
+  return offspring;
+}
+
+function PMXCrossover(pop) {
+  const p = pop.members;
+  const rounds = p.length % 2? p.length - 1: p.length;
+  for (let i = 1; i < rounds; i += 2) {
+    const s = p[i].genome;
+    const t = p[i - 1].genome;
+    x(s, t).forEach((offspring) => {
+      if(new Set(offspring).size != _cities.length) {
+        console.log(offspring);
+        throw new Error("nope");
+      }
+      pop.members.push(new Citizen(offspring));
+    });
+    
+  }
+}
+
+
+function distance(p1, p2) {
+  return Math.sqrt(Math.pow(p1[0] - p2[0], 2) + Math.pow(p1[1] - p2[1], 2));
+}
 
 let _cities = [];
 
@@ -13,13 +73,17 @@ function createTour(idx) {
 function totalDistance(points) {
   let total = 0;
   for (let i = 1; i < points.length; i++) {
-    total += distance(points[i - 1], points[i]);
+    total += distance(points[i - 1], points[i]);;
   }
   return total;
 }
 
-Citizen.prototype.calculateFitness = function() {
-  this.fitness = -totalDistance(createTour(this.genome));
+Citizen.prototype.calculateFitness = function () {
+  if (new Set(this.genome).size < this.genome.length) {
+    this.fitness = -A_HIGH_NR;
+  } else {
+    this.fitness = -totalDistance(createTour(this.genome));
+  }
 };
 
 function shuffle(array) {
@@ -42,7 +106,6 @@ function shuffle(array) {
   return array;
 }
 
-
 function createPopulation(cities, popsize) {
   _cities = cities;
   let population = new Population();
@@ -55,16 +118,6 @@ function createPopulation(cities, popsize) {
   return population;
 }
 
-function createCities(n, minX, maxX, minY, maxY) {
-  let _cities = new Array();
-  for (let i = 0; i < n; i++) {
-    let x = minX + Math.random() * (maxX - minX);
-    let y = minY + Math.random() * (maxY - minY);
-    _cities.push(Array.of(x, y));
-  }
-  return _cities;
-}
-
 function solve(cities, generations, mutationRate, populationSize) {
   let pop = createPopulation(cities, populationSize);
 
@@ -72,9 +125,11 @@ function solve(cities, generations, mutationRate, populationSize) {
     citizen.calculateFitness();
   });
 
+  let history = [];
+
   for (let _ = 0; _ < generations; _++) {
     pop.selection();
-    pop.crossover();
+    PMXCrossover(pop);
     pop.mutation(mutationRate, citizen => {
       let genLength = citizen.genome.length;
       for (let i = 0; i < genLength; i++) {
@@ -89,25 +144,39 @@ function solve(cities, generations, mutationRate, populationSize) {
         }
       }
     });
-
     let _sumFitness = 0;
-    let _minFitness = 1000000000000;
+    let _minFitness = A_HIGH_NR;
     let _maxFitness = -_minFitness;
-    let best =
-      pop.members.forEach(citizen => {
-        citizen.calculateFitness();
-        _sumFitness += citizen.fitness;
-        _minFitness = Math.min(_minFitness, citizen.fitness);
-        _maxFitness = Math.max(_maxFitness, citizen.fitness);
-
-      });
-    let averageFitness = _sumFitness / pop.members.length;
-    //console.log(`${_},${_sumFitness / pop.members.length},${_minFitness},${_maxFitness}`);
+    pop.members.forEach(citizen => {
+      citizen.calculateFitness();
+      _sumFitness += citizen.fitness;
+      _minFitness = Math.min(_minFitness, citizen.fitness);
+      _maxFitness = Math.max(_maxFitness, citizen.fitness);
+    });
+    let averageFitness = Math.abs(_sumFitness / pop.members.length);
+    history.push(averageFitness);
+  //  console.log(`${_},${_sumFitness / pop.members.length},${_minFitness},${_maxFitness}`);
   }
-  return pop.members.reduce((p, c) => {
-    return c.fitness > p.fitness ? c : p
-  }, pop.members[0]);
+
+  return {
+    citizen: pop.members.reduce((p, c) => {
+      return c.fitness > p.fitness ? c : p
+    }, pop.members[0]),
+    history: history
+  };
+}
+
+
+
+function createCities(n, minX, maxX, minY, maxY) {
+  let _cities = new Array();
+  for (let i = 0; i < n; i++) {
+      let x = minX + Math.random() * (maxX - minX);
+      let y = minY + Math.random() * (maxY - minY);
+      _cities.push(Array.of(x, y));
+  }
+  return _cities;
 }
 
 cities = createCities(30, 10, 690, 10, 580);
-console.log(solve(cities, 400, 0.2, 100));
+console.log(solve(cities, 400, 0.2, 100).citizen.genome);
