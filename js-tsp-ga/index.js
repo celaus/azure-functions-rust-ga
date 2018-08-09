@@ -22,7 +22,7 @@ function x(s, t) {
     _map2[s[i]] = t[i];
   }
 
-  for (let i = 0; i < x1; i++) { 
+  for (let i = 0; i < x1; i++) {
     while (offspring[0][i] in _map1) {
       offspring[0][i] = _map1[offspring[0][i]];
     }
@@ -44,18 +44,18 @@ function x(s, t) {
 
 function PMXCrossover(pop) {
   const p = pop.members;
-  const rounds = p.length % 2? p.length - 1: p.length;
+  const rounds = p.length % 2 ? p.length - 1 : p.length;
   for (let i = 1; i < rounds; i += 2) {
     const s = p[i].genome;
     const t = p[i - 1].genome;
     x(s, t).forEach((offspring) => {
-      if(new Set(offspring).size != _cities.length) {
+      if (new Set(offspring).size != _cities.length) {
         console.log(offspring);
         throw new Error("nope");
       }
       pop.members.push(new Citizen(offspring));
     });
-    
+
   }
 }
 
@@ -155,7 +155,7 @@ function solve(cities, generations, mutationRate, populationSize) {
     });
     let averageFitness = Math.abs(_sumFitness / pop.members.length);
     history.push(averageFitness);
-  //  console.log(`${_},${_sumFitness / pop.members.length},${_minFitness},${_maxFitness}`);
+    //  console.log(`${_},${_sumFitness / pop.members.length},${_minFitness},${_maxFitness}`);
   }
 
   return {
@@ -172,7 +172,7 @@ module.exports = function (context, req) {
     console.log("Solving ... ");
     const start = new Date();
     let solution = solve(tour, 400, 0.2, 100);
-    const elapsed = new Date().getTime() - start.getTime(); 
+    const elapsed = new Date().getTime() - start.getTime();
     console.log(`Solved TSP in ${elapsed} ms`);
     let result = {
       tour: createTour(solution.citizen.genome).map((t) => ({
@@ -181,7 +181,6 @@ module.exports = function (context, req) {
       })),
       history: solution.history
     };
-
     context.res = {
       status: 200,
       body: `${JSON.stringify(result)}`

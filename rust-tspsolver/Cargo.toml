@@ -9,4 +9,8 @@ crate-type = ["cdylib"]
 [dependencies] 
 wasm-bindgen = "^0.2"
 rsgenetic = { path = "../../RsGenetic" }
-rand = { git = "https://github.com/rust-lang-nursery/rand.git", features=["wasm-bindgen"] }
+#rand = { git = "https://github.com/rust-lang-nursery/rand.git", features=["wasm-bindgen"] }
+rand = "0.5.5"
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"
