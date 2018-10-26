@@ -1,14 +1,11 @@
-#![feature(test, int_to_from_bytes, use_extern_macros, wasm_custom_section, wasm_import_module)]
-extern crate rand;
-extern crate rsgenetic;
-extern crate test;
-extern crate wasm_bindgen;
+#![feature(test, int_to_from_bytes)]
 
 #[macro_use]
 extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
 
+use js_sys::Math;
 use rand::prelude::*;
 use rand::prng::XorShiftRng;
 use rsgenetic::pheno::*;
@@ -17,7 +14,6 @@ use rsgenetic::sim::seq::Simulator;
 use rsgenetic::sim::*;
 use rsgenetic::stats::StatsCollector;
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
@@ -28,31 +24,39 @@ type City = (f32, f32);
 type Tour = Vec<usize>;
 type TourFitness = i32;
 
-#[wasm_bindgen]
-extern "C" {
-    fn random() -> f32;
-}
-
 fn distance(p1: &City, p2: &City) -> f32 {
     ((p1.0 - p2.0).powi(2) + (p1.1 - p2.1).powi(2)).sqrt()
 }
 
+///
+/// Serialization object to return to JS
+///
 #[derive(Serialize, Deserialize, Debug)]
 struct TSPSolution {
     pub citizen: Tour,
     pub history: Vec<f32>,
 }
 
+///
+/// Used for capturing the fitness of a generation
+///
 struct FitnessHistoryEntry {
     pub min: TourFitness,
     pub max: TourFitness,
     pub avg: f32,
 }
 
+///
+/// Storing the history after several generations
+///
 struct FitnessHistory {
     pub history: Vec<FitnessHistoryEntry>,
 }
 
+///
+/// Implementation of a trait to listen to events after each step.
+/// Computes the min, max, and avg fitness of a generation.
+///
 impl StatsCollector<TourFitness> for FitnessHistory {
     fn after_step(&mut self, pop_fitness: &[TourFitness]) {
         let mut sum: i64 = 0;
@@ -79,6 +83,9 @@ impl StatsCollector<TourFitness> for FitnessHistory {
     }
 }
 
+///
+/// A solution candidate
+///
 #[derive(Clone, Debug)]
 struct TspTour {
     tour: Tour,
@@ -97,6 +104,9 @@ impl TspTour {
 }
 
 impl Phenotype<TourFitness> for TspTour {
+    ///
+    /// The Euclidean distance of an entire tour.
+    ///
     fn fitness(&self) -> TourFitness {
         let tour_cities: Vec<&City> = self.tour.iter().map(|t| &self.cities[*t]).collect();
         let mut fitness = 0f32;
@@ -106,8 +116,10 @@ impl Phenotype<TourFitness> for TspTour {
         -(fitness.round() as i32)
     }
 
+    ///
+    /// Implements the crossover for a TSP tour using PMX
+    ///
     fn crossover(&self, other: &TspTour) -> TspTour {
-        // PMX crossover
         let s = &self.tour;
         let t = &other.tour;
 
@@ -150,6 +162,9 @@ impl Phenotype<TourFitness> for TspTour {
         }
     }
 
+    ///
+    /// Mutates the solution by swapping neighbors at a chance
+    ///
     fn mutate(&self) -> TspTour {
         let mut rng = self.rng_cell.borrow_mut();
         if rng.gen::<f32>() < MUTPROB {
@@ -181,31 +196,34 @@ fn create_random_seed() -> [u8; N] {
     let mut seed = [0u8; N];
 
     for i in 0..N {
-        seed[i] = (random() * 255f32).floor() as u8;
+        seed[i] = (Math::random() * 255f64).floor() as u8;
     }
     seed
 }
 
 #[wasm_bindgen]
 pub fn sovle_tsp(x: Vec<f32>, y: Vec<f32>, generations: usize, population_size: usize) -> String {
+    // Build an (x, y) array and map its indicies to create a TSPTour
     let cities: Rc<Vec<City>> = Rc::new(x.into_iter().zip(y.into_iter()).collect());
     let city_indices: Vec<usize> = (0..cities.len()).collect();
 
-    let mut population: Vec<TspTour> = Vec::with_capacity(population_size);
-
+    // Set up two PRNGs, one for simulation and one for initilization
     let mut rng = XorShiftRng::from_seed(create_random_seed());
     let sim_rng = Rc::new(RefCell::new(XorShiftRng::from_seed(create_random_seed())));
 
-    for _ in 0..population_size {
-        let mut pheno = city_indices.clone();
-        rng.shuffle(&mut pheno);
-        population.push(TspTour::new(pheno, cities.clone(), sim_rng.clone()));
-    }
+    let mut population: Vec<TspTour> = (0..population_size)
+        .map(|_| {
+            let mut pheno = city_indices.clone();
+            rng.shuffle(&mut pheno);
+            TspTour::new(pheno, cities.clone(), sim_rng.clone())
+        })
+        .collect();
 
     let history_collector = Rc::new(RefCell::new(FitnessHistory {
         history: Vec::with_capacity(generations),
     }));
 
+    // Build & run the simulation
     #[allow(deprecated)]
     let mut s: Simulator<_, _, FitnessHistory> =
         Simulator::builder_with_stats(&mut population, Some(history_collector.clone()))
@@ -216,6 +234,7 @@ pub fn sovle_tsp(x: Vec<f32>, y: Vec<f32>, generations: usize, population_size: 
 
     let result = s.get().unwrap();
 
+    // rebuild the avg fitness history of the iterations
     let avg_history: Vec<f32> = history_collector
         .borrow()
         .history
@@ -223,10 +242,12 @@ pub fn sovle_tsp(x: Vec<f32>, y: Vec<f32>, generations: usize, population_size: 
         .map(|h| h.avg)
         .collect();
 
+    // Serialize to JSON and return
     serde_json::to_string(&TSPSolution {
         citizen: result.tour.clone(),
         history: avg_history,
-    }).unwrap()
+    })
+    .unwrap()
 }
 
 #[cfg(test)]
@@ -242,11 +263,10 @@ mod tests {
     fn test_nothing() {
         let mut rng = thread_rng();
         let mut rng2 = thread_rng();
-        
+
         let population_size = 100;
         let generations = 400;
         let mut rng = XorShiftRng::from_rng(rng).unwrap();
-
 
         let x: Vec<f32> = (0..20).map(|_| rng.gen_range(0, 590) as f32).collect();
         let y: Vec<f32> = (0..20).map(|_| rng.gen_range(0, 590) as f32).collect();

@@ -2,11 +2,12 @@ const rust = require("./wasm_tspsolver.js");
 
 module.exports = function (context, req) {
     if (req.body && req.body.tour) {
-      const x = req.body.tour.map((t) => (t.x));
-      const y = req.body.tour.map((t) => (t.y));
+      const tour = req.body.tour;
+      const x = tour.map((t) => (t.x));
+      const y = tour.map((t) => (t.y));
       console.log("Solving ... ");
       const start = new Date();
-      let _solution = rust.sovle_tsp(x, y, 400, 100);
+      let _solution = rust.sovle_tsp(x, y, 400, 200);
       const elapsed = new Date().getTime() - start.getTime(); 
       console.log(`Solved TSP in ${elapsed} ms`);
       let solution = JSON.parse(_solution);

@@ -155,7 +155,6 @@ function solve(cities, generations, mutationRate, populationSize) {
     });
     let averageFitness = Math.abs(_sumFitness / pop.members.length);
     history.push(averageFitness);
-    //  console.log(`${_},${_sumFitness / pop.members.length},${_minFitness},${_maxFitness}`);
   }
 
   return {
@@ -171,7 +170,7 @@ module.exports = function (context, req) {
     const tour = req.body.tour.map((t) => ([t.x, t.y]));
     console.log("Solving ... ");
     const start = new Date();
-    let solution = solve(tour, 400, 0.2, 100);
+    let solution = solve(tour, 400, 0.2, 200);
     const elapsed = new Date().getTime() - start.getTime();
     console.log(`Solved TSP in ${elapsed} ms`);
     let result = {

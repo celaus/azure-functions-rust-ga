@@ -1,10 +1,5 @@
 /* tslint:disable */
 var wasm;
-const random = Math.random;
-
-module.exports.__wbg_random_7c0f10165d552a04 = function() {
-    return random();
-};
 
 let cachegetFloat32Memory = null;
 function getFloat32Memory() {
@@ -22,7 +17,7 @@ function passArrayF32ToWasm(arg) {
 
 const TextDecoder = require('util').TextDecoder;
 
-let cachedDecoder = new TextDecoder('utf-8');
+let cachedTextDecoder = new TextDecoder('utf-8');
 
 let cachegetUint8Memory = null;
 function getUint8Memory() {
@@ -33,7 +28,7 @@ function getUint8Memory() {
 }
 
 function getStringFromWasm(ptr, len) {
-    return cachedDecoder.decode(getUint8Memory().subarray(ptr, ptr + len));
+    return cachedTextDecoder.decode(getUint8Memory().subarray(ptr, ptr + len));
 }
 
 let cachedGlobalArgumentPtr = null;
@@ -64,13 +59,21 @@ module.exports.sovle_tsp = function(arg0, arg1, arg2, arg3) {
     const retptr = globalArgumentPtr();
     wasm.sovle_tsp(retptr, ptr0, len0, ptr1, len1, arg2, arg3);
     const mem = getUint32Memory();
-    const ptr = mem[retptr / 4];
-    const len = mem[retptr / 4 + 1];
-    
-    const realRet = getStringFromWasm(ptr, len).slice();
-    wasm.__wbindgen_free(ptr, len * 1);
+    const rustptr = mem[retptr / 4];
+    const rustlen = mem[retptr / 4 + 1];
+
+    const realRet = getStringFromWasm(rustptr, rustlen).slice();
+    wasm.__wbindgen_free(rustptr, rustlen * 1);
     return realRet;
-    
+
+};
+
+const __wbg_random_8cdd17579946bb97_target = Math.random.bind(Math) || function() {
+    throw new Error(`wasm-bindgen: Math.random.bind(Math) does not exist`);
+};
+
+module.exports.__wbg_random_8cdd17579946bb97 = function() {
+    return __wbg_random_8cdd17579946bb97_target();
 };
 
 module.exports.__wbindgen_throw = function(ptr, len) {
